@@ -1,0 +1,1252 @@
+Para subir a aplicação:
+
+sudo python manage.py runserver
+sudo python manage.py makemigrations	
+sudo python manage.py migrate
+	
+
+sudo chmod 777 db.sqlite3
+-----------------------------------------------------------------------------------------------------------
+1 Preparação do ambiente
+
+		Utilizaremos a versão 2.x do Python, apesar do Django também aceitar a versão 3.x (mas não ultrapasse a versão 3.3). Dependendo da sua plataforma, alguns cuidados precisam ser tomados
+
+	Instalação no Linux (Ubuntu)
+
+		Quase todas as distribuições Linux vêm com o Python instalado por padrão, porém pode acontecer do pip (instalador de pacotes do Python) não estar instalado, o que pode ser facilmente resolvido através do apt-get:
+
+		sudo apt-get install python-pip
+
+	Instalando o Django
+		Para instalar o Django usaremos o pip. O pip é a ferramenta de instalação de pacotes do Python. Com ele, podemos baixar diretamente da web pacotes com as mais diversas funcionalidades, através da sintaxe pip install nome_do_pacote==versao. Em nosso caso, estamos interessados no Django. Para instalar o Django na versão 1.7.4 digite no terminal:
+
+		pip install django==1.7.4
+
+
+
+2 Criando o projeto
+
+	O projeto terá o nome connectedin e ao executar o comando abaixo uma pasta com esse nome será criada:
+
+	django-admin.py startproject connectedin
+
+
+3 - Criar o banco de dados
+
+	Dentro da pasta do projeto connectedin, criamos o banco connectedin/db.sqlite3 através da instrução:
+
+	python manage.py migrate
+
+		
+4 - Subir o servidor
+
+	python manage.py runserver
+
+	Podemos acessar através da URL http://localhost:8000
+
+5 - Criar aplicações
+
+	Separamos melhorar as responsabilidades do nosso projeto criando aplicações, em nosso caso, perfis:
+
+	python manage.py startapp perfis
+
+
+6 - Deixar o projeto ciente da nossa aplicação
+
+	Ainda falta deixar o projeto ciente da nossa aplicação, alterando o arquivo connectedin/connectedin/settings.py:
+
+	INSTALLED_APPS = (
+	    'django.contrib.admin',
+	    'django.contrib.auth',
+	    'django.contrib.contenttypes',
+	    'django.contrib.sessions',
+	    'django.contrib.messages',
+	    'django.contrib.staticfiles',
+	    'perfis'
+	)
+
+
+7 - Criando views
+
+	Arquivo urls.py: É dentro deste arquivo que ocorre o mapeamento de determinadas urls acessadas pelo navegador à um código que deve ser executado, no nosso caso uma função de view.
+
+	Criar um arquivo urls.py na pasta da sua aplicação. O arquivo deverá ficar assim:
+
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+
+		urlpatterns = patterns('',
+		    url(r'^$','perfis.views.index')
+		)
+
+	    Dentro da função url passamos uma expressão regular que reconheça o endereço 'localhost:8000' e para onde o usuário deve ser levado ao acessar este endereço.
+
+	Alterar o urls.py do projeto:
+
+		Temos que informar ao nosso projeto que ele deve consultar as urls mapeadas no /perfis/urls.py quando qualquer endereço for acessado. Para isso alteramos o urls.py do projeto.
+
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+
+		urlpatterns = patterns('',
+		    url(r'^admin/', include(admin.site.urls)),
+		    url(r'^', include('perfis.urls'))
+		)
+
+	Criar um HTML:
+
+		Por convenção utilizamos uma pasta chamada template onde ficarão nossos Htmls. Todas as páginas alí existentes devem estar disponíveis para o Django.
+
+		Criar um pasta chamada templates na aplicação.
+
+		Criar um Html com hello world na pasta templates.
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Hello World</title>
+				<h1>Oi Mundo</h1>
+			</head>
+			<body>
+
+			</body>
+			</html>
+
+		Alterar o arquivo views.py:
+
+			Anteriormente nós utlizamos o urls.py para informar que ao acessar o endereço localhost:8000 o usuário será  direcionado para 'perfis.views.index', isto é, /perfis/views/index. Dentro da views.py temos que criar a função index que será responsável por chamar o nosso index.html:
+
+				from django.shortcuts import render
+
+				def index(request):
+					return render(request, 'index.html')
+
+				É fundamental que o index.html esteja na pasta templates, caso contrário o Django não o encontrará.
+				
+
+	Recapitulando, o que é necessário:
+	 1 - Criar um html. (index.html)
+	 2 - Criar uma função que chame este html.(função index do views.py)
+	 3 - Mapear a url para que ando acessada nos leve à função index ou outras, dependendo do endereço. (urls.py da  aplicação)
+	 4 - Fazer com que nosso projeto chame o urls.py quando qualquer url for acessada. (urls.py do projeto)
+
+---------------------------------------------------------------------------------------------------------------------
+
+
+8 - Expressões regulares e mapeamento de Urls:
+	
+	Na hora de mapear a url acessada pelo usuário fazemos a utilização de expressões regulares. Veja alguns exemplos:
+		Para mapear o endereço sem nada alem de localhost:8000:
+			url(r'^$', 'perfis.views.index'),
+
+		Para mapear o endereço com perfis :
+			url(r'^perfis$', 'perfis.views.perfil')
+
+		Para mapear o endereço com perfis/qualquer-numero :			
+			url(r'^perfis/\d+$', 'perfis.views.perfil')
+
+		Pegar grupos/parametros :
+			url(r'^perfis/(?P<perfil_id>\d+)$', 'perfis.views.perfil')
+
+			ao se fazer isso a função que foi mapeada (perfil), deve receber este parametro:
+				def perfil(request, perfil_id):
+					return render(request, 'perfil.html')
+
+
+9 - Criar a classe perfis:
+
+	A classe perfis diz respeito ao nosso negócio, portanto deverá ser criada na camada model, no nosso caso models.py
+
+	from django.db import models
+
+	class Perfil(object):
+
+		def __init__(self, nome='', email='', telefone='', nome_empresa=''):
+			self.nome = nome
+			self.email = email
+			self.telefone = telefone
+			self.nome_empresa = nome_empresa
+
+10 - Alterar o views.py para que ao receber um parametro o programa faça algo:
+
+	from django.shortcuts import render
+	from perfis.models import Perfil
+
+	def index(request):
+		return render(request, 'index.html')
+
+	def perfil(request, perfil_id):
+
+		perfil = Perfil() 
+
+		if perfil_id == '1': 
+			perfil = Perfil('Flavio Almeida', 'gb@ucs.br', '9999999', 'UCS')
+
+		return render(request, 'perfil.html')	
+
+11 - Exibir os dados de um perfis na perfil.html:
+
+	<!doctype html>
+	<html lang="pt-br">
+	<head>
+	  <meta charset="UTF-8" />
+	  <title>ConnectedIn</title>
+	</head>
+	<body>
+		<h1>Detalhe Perfil</h1>
+		nome = {{perfil.nome}},
+		email = {{perfil.email}},
+		telefone = {{perfil.telefone}},
+		empresa = {{perfil.empresa}}
+	</body>
+	</html>		
+
+12 - Enviar o objeto perfil para o html através da função render: 
+
+	Para o html acima exibir o que estou solicitando precisamos disponibilizar/enviar o objeto perfi à ele:
+
+		from django.shortcuts import render
+		from perfis.models import Perfil
+
+		def index(request):
+			return render(request, 'index.html')
+
+		def perfil(request, perfil_id):
+
+			perfil = Perfil() 
+
+			if perfil_id == '1': 
+				perfil = Perfil('Flavio Almeida', 'gb@ucs.br', '9999999', 'UCS')
+
+			if perfil_id == '2': 
+				perfil = Perfil('Gustavo da Rosa', 'gb@ucs.br', '0000000', 'Colombo')
+
+			return render(request, 'perfil.html', {"perfil" : perfil})	
+	
+
+--------------------------------------------------------------------------------------------------------------------
+
+13 - Conectando com o banco de dados:
+
+	Para que uma classe tenha seus atributos manipulados em banco de dados, ela precisa herdar a models:
+
+		from django.db import models
+
+		class Perfil(models.Model):
+
+			nome
+			email
+			telefone
+			nome_empresa
+
+		Quando herdamos da classe Models ganhamos um bonus: Não precisamos criar o método init e além disso, o Django, por convenção, irá criar uma tabela no banco de dados com o mesmo modelo de dados. 
+		Será então criada a tabela perfil com as conlunas correspondentes aos atributos. Precisamos apenas informas os tipo de cada coluna:
+
+			from django.db import models
+
+			class Perfil(models.Model):
+
+				nome = models.CharField(max_length=255, null=False)
+				email = models.CharField(max_length=255, null=False)
+				telefone = models.CharField(max_length=15, null=False)
+				nome_empresa = models.CharField(max_length=255, null=False)
+		
+		Mas fazer apenas isso não cria a tabela no banco, criar a classe conforme acima gera o Schema do banco de dados que o Django irá utilizar.
+		Para criar de fato, digite o comando abaixo no terminal, na pasta do projeto:
+
+			python manage.py makemigrations					 
+
+		Se no futuro criarmos mais atributos (que por sua vez serão colunas) vou ter que executar esse comando novamente.
+
+		Agora vamos aplicar as mudanças no banco:
+
+			python manage.py migrate
+
+
+14 - Operações no banco de dados 
+
+	Agora vamos criar alguns perfis manualmente pelo terminal do python, para que possamos continuar no desenvolvimento
+
+	Executar o comando abaixo para abrir o terminal do python:
+		python manage.py shell			
+
+	Importar o model:
+		from perfis.models import Perfil
+
+	Vamos instaciar alguns objetos:
+		perfil = Perfil(nome = 'Osvaldo', email = "os@ucs.br", telefone = "99998888", nome_empresa = "UCS")
+
+15 - Insert
+
+	Para gravar o objeto no banco vamos chamar o método "save" que foi herdado da classe Model pela classe Perfil
+		perfil.save()
+
+	Verificar se o dado foi gravado no banco:
+		perfil_encontrado = Perfil.objects.get(id=1)
+		perfil_encontrado.nome
+
+16 - Update 
+	
+	Para alterar um dado do banco :
+		perfil_encontrado.nome = 'Oswaldo Alterado'
+		perfil_encontrado.save()
+
+17 - Veremos o delete mais para frente
+
+18 - Insira mais 2 ou tres objetos no banco
+------------------------------------------------------------------------------------------------------------------
+
+19 - Alterar o views.py da nossa aplicação:
+	
+	Já que descobrimos como consultar os objetos no banco vamos alterar nosso views.py:
+		from django.shortcuts import render
+		from perfis.models import Perfil
+
+		def index(request):
+			return render(request, 'index.html')
+
+		def perfil(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+
+			return render(request, 'perfil.html', {"perfil" : perfil})		
+
+20 - Listas todos os perfil do banco no index.html:
+	
+	Enviar um dicionário com todos os perfil para o index.html:
+		No nosso controller, views.py, vamos utilizar o comando Perfil.objects.all() para enviar todos os dados
+
+		return render(request, 'index.html', {perfis : Perfil.objetcs.all()})
+
+21 - Template tag
+	
+	Template tag FOR:
+		Para que o nosso html consiga fazer um loop por toda a lista:
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>ConnectedIn</title>
+			</head>
+			<body>
+				<h1>Bem vindo ao ConnectedIn</h1>
+				<ul>
+					{% for perfil in perfis %}
+					<li>{{perfil.nome}}</li> / <li>{{perfil.email}}</li>
+					{% endfor %}
+				</ul>
+			</body>
+			</html> 
+
+	Template tag IF:
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>ConnectedIn</title>
+		</head>
+		<body>
+			<h1>Bem vindo ao ConnectedIn</h1>
+			{% if perfis %}
+			<ul>
+				{% for perfil in perfis %}
+				<li>
+					<a href= "/perfis/{{perfil.id}}">{{perfil.nome}} / {{perfil.email}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p>Nenhum perfil encontrado</p>
+			{% endif %}
+		</body>
+		</html>
+
+		Aproveitei para criar um link para o form de perfis.
+
+22 - Tamplate tag URL: Atribuir um alias para as urls
+	
+	Esse processo evita erros futuros pois mesmo mudando as urls o html vai funcionar.
+	Adicionar o parametro name, que é o alias, nas urls (no arquivo urls.py):
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+
+		urlpatterns = patterns('',
+		    url(r'^$', 'perfis.views.index', name='index'),
+		    url(r'^perfis/(?P<perfil_id>\d+)$', 'perfis.views.perfil', name='exibir')
+		)
+
+	Modificar os htmls:
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>ConnectedIn</title>
+		</head>
+		<body>
+			<h1>Bem vindo ao ConnectedIn</h1>
+			{% if perfis %}
+			<ul>
+				{% for perfil in perfis %}
+				<li>
+					<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p>Nenhum perfil encontrado</p>
+			{% endif %}
+		</body>
+		</html>	
+
+--------------------------------------------------------------------------------------------------------------
+
+23 - Função Convidar Perfis
+
+	Criar o método convidar no controller (views.py):
+		from django.shortcuts import render
+		from perfis.models import Perfil
+
+		def index(request):
+			return render(request, 'index.html', {'perfis' : Perfil.objects.all()})
+
+		def perfil(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+			return render(request, 'perfil.html', {"perfil" : perfil})
+
+		def convidar(request, perfil_id):
+			pass	
+
+		Não queremos programar nada ainda no nosso controller. Por isso vamos colocar apenas um "pass" para que não ocorra erro no código.
+
+	Agora temos que mapear a URL que vai atender a esta requisição (no arquivo urls):
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+
+		urlpatterns = patterns('',
+		    url(r'^$', 'perfis.views.index', name='index'),
+		    url(r'^perfis/(?P<perfil_id>\d+)$', 'perfis.views.perfil', name='exibir')
+		    url(r'^perfis/(?P<perfil_id>\d+)/convidar)$', perfis.views.convidar, name='convidar')
+		)
+		
+24 - Importal views na urls.py
+	
+	Vamos mudar o modo como mapeamos urls para que nosso programa fique mais seguro:
+		 from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+		from perfis import views
+
+		urlpatterns = patterns('',
+		    url(r'^$', views.index, name='index'),
+		    url(r'^perfis/(?P<perfil_id>\d+)$', views.perfil, name='exibir')
+		    url(r'^perfis/(?P<perfil_id>\d+)/convidar$', views.convidar, name='convidar')
+		)
+
+
+25 - Modificar o template de perfil
+	<!doctype html>
+	<html lang="pt-br">
+	<head>
+	  <meta charset="UTF-8" />
+	  <title>ConnectedIn</title>
+	</head>
+	<body>
+		<h1>Detalhe Perfil: {{ perfil.nome }}</h1>
+		<a href="{% url 'convidar' perfil.id %}">convidar</a>
+	</body>
+	</html>
+	
+
+26 - Criar método responsável por enviar um convite de perfis:
+
+	from django.db import models
+
+	class Perfil(models.Model):
+
+		nome = models.CharField(max_length=255, null=False)
+		email = models.CharField(max_length=255, null=False)
+		telefone = models.CharField(max_length=15, null=False)
+		nome_empresa = models.CharField(max_length=255, null=False)
+
+
+		def convidar(self, perfil_convidado):
+			pass		
+
+27 - Criar o método para pegar usuário logado: 
+	
+	A lógica desse programa diz que precisamos estar logados no sistema para poder convidar alguém.			
+
+		from django.shortcuts import render
+		from perfis.models import Perfil
+
+		def index(request):
+			return render(request, 'index.html', {'perfis' : Perfil.objects.all()})
+
+		def perfil(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+			return render(request, 'perfil.html', {"perfil" : perfil})
+
+		def convidar(request, perfil_id):
+			pass
+
+		def get_perfis_logado(request):
+			return Perfil.objects.get(id=1)	
+
+		A principio (apenas por enquanto) o metodo retornará sempre o usuário numero 1.
+
+
+28 - Alterar o método convidar:
+
+	from django.shortcuts import render
+	from perfis.models import Perfil
+
+	def index(request):
+		return render(request, 'index.html', {'perfis' : Perfil.objects.all()})
+
+	def perfil(request, perfil_id):
+
+		perfil = Perfil.objects.get(id=perfil_id) 
+		return render(request, 'perfil.html', {"perfil" : perfil})
+
+	def convidar(request, perfil_id):
+		perfil_a_convidar = Perfil.objects.get(id=perfil_id)
+		perfis_logado = get_perfis_logado(request)
+		perfis_logado.convidar(perfil_a_convidar)
+		return render(request, 'index.html', {'perfis' : Perfil.objects.all()})	
+
+	def get_perfis_logado(request):
+		return Perfil.objects.get(id=1)
+
+29 - Criacao classe Convite
+
+	from django.db import models
+
+	class Perfil(models.Model):
+
+		nome = models.CharField(max_length=255, null=False)
+		email = models.CharField(max_length=255, null=False)
+		telefone = models.CharField(max_length=15, null=False)
+		nome_empresa = models.CharField(max_length=255, null=False)
+
+
+		def convidar(self, perfil_convidado):
+			pass
+
+	class Convite(models.Model):
+		solicitante = models.ForeignKey(Perfil)
+		convidado = models.ForeignKey(Perfil)
+
+30 - Related Name
+	
+	O obvio seria criar duas novas colunas na tabela perfil para atender as FKs solicitante e convidado,
+	mas com o Django, quando temos um FKs não precisamos criar mais atributos na minha classe. Isso porque esse atributos não precisam existir nessa classe, apenas na Convite. Então utilizamos o related_name que vai criar as colunas apenas no banco de dados na tabela Perfil, sem precisar criar atrubutos de classe.
+
+	from django.db import models
+
+	class Perfil(models.Model):
+
+		nome = models.CharField(max_length=255, null=False)
+		email = models.CharField(max_length=255, null=False)
+		telefone = models.CharField(max_length=15, null=False)
+		nome_empresa = models.CharField(max_length=255, null=False)
+
+
+		def convidar(self, perfil_convidado):
+			pass
+
+	class Convite(models.Model):
+		solicitante = models.ForeignKey(Perfil, related_name='convites_feitos')
+		convidado = models.ForeignKey(Perfil, related_name='convites_recebidos')
+
+31 - Ajuste no método convidar
+
+	from django.db import models
+
+	class Perfil(models.Model):
+
+		nome = models.CharField(max_length=255, null=False)
+		email = models.CharField(max_length=255, null=False)
+		telefone = models.CharField(max_length=15, null=False)
+		nome_empresa = models.CharField(max_length=255, null=False)
+
+
+		def convidar(self, perfil_convidado):
+			convite = Convite(solicitante = self, convidado = perfil_convidado)
+			convite.save()
+
+	class Convite(models.Model):
+		solicitante = models.ForeignKey(Perfil, related_name='convites_feitos')
+		convidado = models.ForeignKey(Perfil, related_name='convites_recebidos')
+
+32 - Atualizar o Schema do banco:
+
+	python manage.py makemigrations
+
+33 - Aplicar as alterações no banco:
+	
+	python manage.py migrate
+
+34 - Redirect:
+	
+	Para otimizar nosso código vou alterar meu controller:
+
+	from django.shortcuts import render, redirect
+	from perfis.models import Perfil
+
+	def index(request):
+		return render(request, 'index.html', {'perfis' : Perfil.objects.all()})
+
+	def perfil(request, perfil_id):
+
+		perfil = Perfil.objects.get(id=perfil_id) 
+		return render(request, 'perfil.html', {"perfil" : perfil})
+
+	def convidar(request, perfil_id):
+		perfil_a_convidar = Perfil.objects.get(id=perfil_id)
+		perfis_logado = get_perfis_logado(request)
+		perfis_logado.convidar(perfil_a_convidar)
+		return redirect('index')
+
+	def get_perfis_logado(request):
+		return Perfil.objects.get(id=1)	
+
+
+-----------------------------------------------------------------------------------------------------
+
+35 - Pasta Static:
+	Tudo que estiver dentro da pasta static estará acessivel ao navegador. Com ela podemos concentrar tudo em um só lugar.
+	Exemplos de arquivos para colocar nesta pasta: css, javascript, imagens, etc...
+
+	criar a pasta static dentro de connectedid/perfis
+
+36 - Fazer download das dependências
+
+	Fazer o download: https://s3.amazonaws.com/caelum-online-public/django/static.zip
+	Descompactar e copiar o conteúdo para a sua pasta static
+
+37 - Importar o css 
+	
+	Importar o Css para todas as páginas da nossa aplicação:
+
+	No index.hmtml:
+		<!-- connectedin/perfis/templates/base.html -->
+		{% load staticfiles %}
+		<!DOCTYPE html>
+		<html lang="pt">
+		  <head>
+		    <meta charset="utf-8">
+		    <meta name="viewport" content="width=device-width">
+		    <link href="{% static "styles/bootstrap.css" %}" rel="stylesheet">
+		    <link href="{% static "styles/main.css" %}" rel="stylesheet">
+		    <title>ConnectedIn</title>
+		  </head>
+		<body>
+			<h1>Bem vindo ao ConnectedIn</h1>
+			{% if perfis %}
+			<ul>
+				{% for perfil in perfis %}
+				<li>
+					<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p>Nenhum perfil encontrado</p>
+			{% endif %}
+		</body>
+		</html>	
+
+38 - Agora, para nao precisar fazer isso sempre, vamos criar uma página que sirva de molde para todas as outras:
+	
+	base.html:
+
+		{% load staticfiles %}
+		<!DOCTYPE html>
+		<html lang="pt-br">
+		  <head>
+		    <meta charset="utf-8">
+		    <meta name="viewport" content="width=device-width">
+		    <link href="{% static "styles/bootstrap.css" %}" rel="stylesheet">
+		    <link href="{% static "styles/main.css" %}" rel="stylesheet">
+		    <title>ConnectedIn</title>
+		  </head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<ul class="nav nav-pills pull-right">
+						<li><a href="{% url 'index' %}">NOME</a></li>
+						<li><a href="/logout/">Logout</a></li>
+					</ul>
+					<h3 class="text-muted">ConnectedIn</h3>
+				</div>
+				<div class="row content">
+					{% block body %}
+					{% endblock %}
+				</div>
+			</div>
+		</body>
+		</html>	
+
+	index.html:
+
+		{% extends "base.html" %}
+		{% block body %}
+		<div class="col-lg-12">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<strong>Todos os perfis</strong>
+				</div>
+				{% if perfis %}
+				<ul>
+					{% for perfil in perfis %}
+					<li>
+						<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<p>Nenhum perfil encontrado</p>
+				{% endif %}
+			</div>
+		</div>
+		{% endblock %}	
+
+	Perfil.html:
+		{% extends "base.html" %}
+		{% block body %}
+		<div class="row">
+			<div class="col-lg-12">
+				<h2 style="margin-top: 0">{{ perfil.nome }}</h2>
+
+				<address>
+					<strong>{{ perfil.nome_empresa }}</strong>		
+					<br>
+					<abbr title="Telefone">Tel:</abbr> {{ perfil.telefone }}
+					<br>
+					<a href="mailto:{{ perfil.email }}">{{ perfil.email }}</a>
+				</address>
+				<a href="{% url 'convidar' perfil.id %}">Convidar</a>
+			</div>	
+		</div>
+		{% endblock %}	
+
+
+----------------------------------------------------------------------------------------------------------------
+
+39 - Pluralize:
+
+	Vamos modificar nosso programa para que no index.html aparecam os convites recebidos, utilizando o pluralize para exibir convite e convites.
+
+	views.py:
+		from django.shortcuts import render, redirect
+		from perfis.models import Perfil
+
+		def index(request):
+			return render(request, 'index.html', {'perfis' : Perfil.objects.all(), 'perfil_logado' : get_perfis_logado(request)})
+
+		def perfil(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+			return render(request, 'perfil.html', {"perfil" : perfil})
+
+		def convidar(request, perfil_id):
+			perfil_a_convidar = Perfil.objects.get(id=perfil_id)
+			perfis_logado = get_perfis_logado(request)
+			perfis_logado.convidar(perfil_a_convidar)
+			return redirect('index')
+
+		def get_perfis_logado(request):
+			return Perfil.objects.get(id=1)	
+
+		Percisamos passa o perfil_logado para ter da onde extrair informações.
+
+	Index.html:
+		{% extends "base.html" %}
+		{% block body %}
+		<div class="col-lg-12">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<strong>Todos os perfis</strong>
+				</div>
+				{% if perfis %}
+				<ul>
+					{% for perfil in perfis %}
+					<li>
+						<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<p>Nenhum perfil encontrado</p>
+				{% endif %}
+			</div>
+
+			<div class="panel panel-default">
+				{% if perfil_logado.convites_recebidos.count %}
+				<div class="panel-heading">
+					<strong>Você tem {{ perfil_logado.convites_recebidos.count }} convite{{ perfil_logado.convites_recebidos.count | pluralize }} aguardando aprovação</strong>
+				</div>
+				<ul class="list-group">
+					{% for convite in perfil_logado.convites_recebidos.all %}
+					<li class="list-group-item">
+						{{convite.solicitante.nome}}
+						<a href="#" class="pull-right">Aceitar</a>
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<div class="panel-body">
+					<p>Nenhum convite recebido :(</p>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+		{% endblock %}
+
+
+40 - Variáveis de template - {% with %}
+
+	Utilizamos o codigo perfil_logado.convites_recebidos.count várias vezes no codigo, vamo transformar isso em uma variável de template. 
+	{% extends "base.html" %}
+	{% block body %}
+	<div class="col-lg-12">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<strong>Todos os perfis</strong>
+			</div>
+			{% if perfis %}
+			<ul>
+				{% for perfil in perfis %}
+				<li>
+					<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p>Nenhum perfil encontrado</p>
+			{% endif %}
+		</div>
+
+		<div class="panel panel-default">
+			{% with total_de_convites = perfil_logado.convites_recebidos.count %}
+				{% if total_de_convites %}
+				<div class="panel-heading">
+					<strong>Você tem {{ total_de_convites }} convite{{ total_de_convites | pluralize }} aguardando aprovação</strong>
+				</div>
+				<ul class="list-group">
+					{% for convite in perfil_logado.convites_recebidos.all %}
+					<li class="list-group-item">
+						{{convite.solicitante.nome}}
+						<a href="#" class="pull-right">Aceitar</a>
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<div class="panel-body">
+					<p>Nenhum convite recebido :(</p>
+				</div>
+				{% endif %}
+			{% endwith%}
+		</div>
+	</div>
+	{% endblock %}
+
+
+--------------------------------------------------------------------------------------------------------
+
+
+41 - Habilitando a função de aceitar convites:
+
+	criar o atributo (campo da tabela) contatos na classe Perfil. Vai ser o campor com todos os contados desse Perfil. Como é uma relação n para n criamos assim:
+		from django.db import models
+
+		class Perfil(models.Model):
+
+			nome = models.CharField(max_length=255, null=False)
+			email = models.CharField(max_length=255, null=False)
+			telefone = models.CharField(max_length=15, null=False)
+			nome_empresa = models.CharField(max_length=255, null=False)
+			contatos = models.ManyToManyField('self')
+
+			def convidar(self, perfil_convidado):
+				convite = Convite(solicitante = self, convidado = perfil_convidado)
+				convite.save()
+
+		class Convite(models.Model):
+			solicitante = models.ForeignKey(Perfil, related_name='convites_feitos')
+			convidado = models.ForeignKey(Perfil, related_name='convites_recebidos')
+
+
+	criar no controller o método:
+		from django.shortcuts import render, redirect
+		from perfis.models import Perfil, Convite
+
+		def index(request):
+			return render(request, 'index.html', {'perfis' : Perfil.objects.all(), 'perfil_logado' : get_perfis_logado(request)})
+
+		def exibir(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+			return render(request, 'perfil.html', {"perfil" : perfil})
+
+		def convidar(request, perfil_id):
+			perfil_a_convidar = Perfil.objects.get(id=perfil_id)
+			perfis_logado = get_perfis_logado(request)
+			perfis_logado.convidar(perfil_a_convidar)
+			return redirect('index')
+
+		def aceitar(request, convite_id):
+			convite = Convite.objects.get(id=convite_id)
+			convite.aceitar()
+			return redirect('index')
+
+		def get_perfis_logado(request):
+			return Perfil.objects.get(id=1)
+
+	criar o método aceitar na classe Convite: (aqui acontece um insert (add) e um delete)
+		from django.db import models
+
+		class Perfil(models.Model):
+
+			nome = models.CharField(max_length=255, null=False)
+			email = models.CharField(max_length=255, null=False)
+			telefone = models.CharField(max_length=15, null=False)
+			nome_empresa = models.CharField(max_length=255, null=False)
+			contatos = models.ManyToManyField('self')
+
+			def convidar(self, perfil_convidado):
+				convite = Convite(solicitante = self, convidado = perfil_convidado)
+				convite.save()
+
+		class Convite(models.Model):
+			solicitante = models.ForeignKey(Perfil, related_name='convites_feitos')
+			convidado = models.ForeignKey(Perfil, related_name='convites_recebidos')
+
+			def aceitar(self):
+				self.convidado.contatos.add(self.solicitante)
+				self.convidado.solicitante.add(self.convidado)
+				self.delete()
+			
+
+
+	Declarar uma rota que chama nosso método aceitar:
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+		from perfis import views
+
+		urlpatterns = patterns('',
+		    url(r'^$', views.index, name='index'),
+		    url(r'^perfis/(?P<perfil_id>\d+)$', views.exibir, name='exibir'),
+		    url(r'^perfis/(?P<perfil_id>\d+)/convidar$', views.convidar, name='convidar'),
+		    url(r'^convite/(?P<convite_id>\d+)/aceitar$', views.aceitar, name='aceitar')
+		)
+
+	Alterar o index.html para que ele mande o uruário para a rota que criamos:
+		{% extends "base.html" %}
+		{% block body %}
+		<div class="col-lg-12">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<strong>Todos os perfis</strong>
+				</div>
+				{% if perfis %}
+				<ul>
+					{% for perfil in perfis %}
+					<li>
+						<a href= "{% url 'exibir' perfil.id %}">{{perfil.nome}} / {{perfil.email}}</a>
+					</li>
+					{% endfor %}
+				</ul>
+				{% else %}
+				<p>Nenhum perfil encontrado</p>
+				{% endif %}
+			</div>
+
+			<div class="panel panel-default">
+				{% with total_de_convites=perfil_logado.convites_recebidos.count %}
+					{% if total_de_convites %}
+					<div class="panel-heading">
+						<strong>Você tem {{ total_de_convites }} convite{{ total_de_convites | pluralize }} aguardando aprovação</strong>
+					</div>
+					<ul class="list-group">
+						{% for convite in perfil_logado.convites_recebidos.all %}
+						<li class="list-group-item">
+							{{convite.solicitante.nome}}
+							<a href="{{% url 'aceitar' convite.id %}}" class="pull-right">Aceitar</a>
+						</li>
+						{% endfor %}
+					</ul>
+					{% else %}
+					<div class="panel-body">
+						<p>Nenhum convite recebido :(</p>
+					</div>
+					{% endif %}
+				{% endwith%}
+			</div>
+		</div>
+		{% endblock %}
+
+
+		Como mexemos no banco (adiconamos uma coluna), temos que atualiza-lo:
+			python manage.py makemigrations
+
+			e
+
+			python manage.py migrate
+
+-----------------------------------------------------------------------------------------------------------
+
+42 - Exibir todos os contatos do perfil na index.html:			
+
+{% extends "base.html" %}
+{% block body %}
+<div class="col-lg-12">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Todos os Perfis</strong>
+        </div>  
+        {% if perfis %}
+          <ul>
+              {% for perfil in perfis %}
+                  <li>
+                    <a href="{% url 'exibir' perfil.id%}">{{ perfil.nome }}</a> / {{ perfil.email }}
+                  </li>
+              {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhum Perfil encontrado</p>
+        {% endif %}
+    </div>
+    <div class="panel panel-default">
+        {% with total_de_convites=perfil_logado.convites_recebidos.count %}
+          {% if total_de_convites %}
+              <div class="panel-heading">
+                  <strong>Você tem {{ total_de_convites }} convite{{ total_de_convites|pluralize }} aguardando aprovação</strong>
+              </div>
+              <ul class="list-group">
+                  {% for convite in perfil_logado.convites_recebidos.all %}
+                      <li class="list-group-item">
+                              {{ convite.solicitante.nome }} 
+                              <a href="{% url 'aceitar' convite.id %}" class="pull-right">aceitar</a>
+                      </li>
+                  {% endfor %}
+              </ul>
+          {% else %}
+              <div class="panel-body">
+                  <p>Nenhum convite recebido :(</p>
+              </div>
+          {% endif %}
+        {% endwith %}
+    </div>
+    <div class="panel panel-default">
+    {% with total_de_contatos=perfil_logado.contatos.count %}
+        {% if total_de_contatos %}
+            <div class="panel-heading">
+                    <strong>Você tem {{total_de_contatos}} contato{{ total_de_contatos|pluralize }}</strong>
+            </div>
+            <ul class="list-group">
+                {% for contato in perfil_logado.contatos.all %}
+                    <a href="{% url 'exibir' contato.id %}" class="list-group-item">{{ contato.nome }} // {{ contato.email }}</a>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="panel-body">
+                <p>Você não possui contatos no momento :(</p>
+            </div>
+        {% endif %}
+    {% endwith %}
+    </div>
+</div>
+{% endblock %}
+
+
+43 - Não exibir a opção Convidar para um usuário que já é contato:
+
+	Alteral o método exibir do controler:
+		from django.shortcuts import render, redirect
+		from perfis.models import Perfil, Convite
+
+		def index(request):
+			return render(request, 'index.html', {'perfis' : Perfil.objects.all(), 'perfil_logado' : get_perfis_logado(request)})
+
+		def exibir(request, perfil_id):
+
+			perfil = Perfil.objects.get(id=perfil_id) 
+			perfil_logado = get_perfis_logado(request)
+			ja_eh_contato = perfil in perfil_logado.contatos.all()
+
+			return render(request, 'perfil.html', {"perfil" : perfil, 'ja_eh_contato' : ja_eh_contato})
+
+		def convidar(request, perfil_id):
+			perfil_a_convidar = Perfil.objects.get(id=perfil_id)
+			perfis_logado = get_perfis_logado(request)
+			perfis_logado.convidar(perfil_a_convidar)
+			return redirect('index')
+
+		def aceitar(request, convite_id):
+			convite = Convite.objects.get(id=convite_id)
+			convite.aceitar()
+			return redirect('index')
+
+		def get_perfis_logado(request):
+			return Perfil.objects.get(id=1)
+
+	Alterar o perfil.html:
+		{% extends "base.html" %}
+		{% block body %}
+		<div class="row">
+			<div class="col-lg-12">
+				<h2 style="margin-top: 0">{{ perfil.nome }}</h2>
+
+				<address>
+					<strong>{{ perfil.nome_empresa }}</strong>		
+					<br>
+					<abbr title="Telefone">Tel:</abbr> {{ perfil.telefone }}
+					<br>
+					<a href="mailto:{{ perfil.email }}">{{ perfil.email }}</a>
+				</address>
+				{% if ja_eh_contato %}
+					<div class="well well-sm">Vocês estão conectados!</div>
+				{% else %}
+					<a href="{% url 'convidar' perfil.id %}">Convidar</a>
+				{% endif %}
+			</div>	
+		</div>
+		{% endblock %}
+
+
+------------------------------------------------------------------------------------------------------------
+
+AGORA O BICHO PEGA
+
+44 - Criar uma nova aplicação: 
+	
+	Dentro do terminal:	
+		python manage.py startapp usuarios	
+
+	Cadastrar o settings.py:
+		INSTALLED_APPS = (
+		    'django.contrib.admin',
+		    'django.contrib.auth',
+		    'django.contrib.contenttypes',
+		    'django.contrib.sessions',
+		    'django.contrib.messages',
+		    'django.contrib.staticfiles',
+		    'perfis',
+		    'usuarios'
+		)		
+
+45 - Mapear a primeira URL:
+	
+	a -Criar o arquivo urls.py		
+
+	b- Precisamos implamentar as funções Patterns e Url, para isso temos que importar os pacotes necessários no urls.py:
+		from Django.conf.urls import patterns, url
+
+	c - Depois implementamos as funções:
+		from Django.conf.urls import patterns, url
+
+		urlpatters = pattern('',
+			url(r'^registrar/$', ???, name="registrar")
+
+		)	
+		Observe que ainda temos ???
+
+46 - Criar a class based view:
+	No views.py
+		from django.shortcuts import render
+		from django.views.generic.base import View
+
+		# Create your views here.
+		class RegistrarUsuarioView(View):
+
+			def get(self, request):
+				pass
+
+			def post(self, request):
+				pass
+
+
+48 - Utilizar a class based view criada no urls.py:
+	from django.conf.urls import patterns, url
+	from views import RegistrarUsuarioView
+
+	urlpatterns = patterns('',
+		url(r'^registrar/$', RegistrarUsuarioView.as_view(), name="registrar")
+	)
+
+49 - Informar no urls.py do nosso projeto que esse nosso urls.py da aplicação existe:
+	
+	No urls.py do connectedin:
+		from django.conf.urls import patterns, include, url
+		from django.contrib import admin
+
+		urlpatterns = patterns('',
+		    url(r'^admin/', include(admin.site.urls)),
+		    url(r'^', include('perfis.urls'))
+		    url(r'^', include('usuarios.urls'))
+		)
+
+
+50 - Definir o que cada método do nosso controller vai chamar:
+	from django.shortcuts import render
+	from django.views.generic.base import View
+
+	# Create your views here.
+	class RegistrarUsuarioView(View):
+		template_name = 'registrar.html'
+
+		def get(self, request):
+			return render(request, self.template_name)
+
+		def post(self, request):
+			return render(request, self.template_name)
+
+---------------------
+Parte referente a criação de templates:
+
+51 - Criar a pasta templates na minha aplicação
+
+52 - Vamos criar o template base de usuários.
+	
+	a - Criar o base_usuarios.html
+{% load staticfiles %}
+	<!DOCTYPE html>
+	<html lang="pt-br">
+	  <head>
+	    <meta charset="utf-8">
+	    <meta name="viewport" content="width=device-width">
+	    <title>ConnectedIn</title>
+	    <link href="{% static "styles/bootstrap.css" %}" rel="stylesheet">
+	    <link href="{% static "styles/main.css" %}" rel="stylesheet">
+	  </head>
+	<body>
+		<div class="container">
+			{% block body %}
+			{% endblock %}
+		</div>
+	</body>
+	</html>
+
+52 - Criar a registrar.html
+	{% extends "base_usuarios.html" %}
+	{% block body%}
+
+	<form action="{% url 'registrar' %}" method="post" class="form-signin">
+		<h2 class="form-signin-heading"> Crie seu usuário </h2>
+		
+		<input type="text" name="email" id="id_email" class="form-control" placeholder="email ***">
+		<input type="text" name="nome" id="id_nome" class="form-control" placeholder="seu nome">
+		<input type="password" name="senha" id="id_senha" class="form-control" placeholder="***">
+		<input type="text" name="telefone" id="id_telefone" class="form-control" placeholder="9999999">
+		<input type="text" name="nome_empresa" id="id_nome_empresa" class="form-control" placeholder="nome_empresa">
+
+		<hr/>
+
+		<button class="btn btn-lg btn-primary btn-block" type="submit">Registrar</button>
+
+	</form>
+
+	{% endblock %}	
+
+
+
+51 - Adicionar o {% csrf_token %} no registrar.html:
+		
